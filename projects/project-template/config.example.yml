@@ -1,0 +1,5 @@
+# Non-secret runtime config.
+# Keep secrets in environment variables, not in this file.
+
+app_name: project-template
+dry_run: true

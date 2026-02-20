@@ -1,0 +1,11 @@
+[project]
+name = "project-template"
+version = "0.1.0"
+description = "Starter template for automation projects"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]

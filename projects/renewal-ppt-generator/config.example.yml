@@ -1,0 +1,6 @@
+# Non-secret runtime config.
+# Keep secrets in environment variables, not in this file.
+
+app_name: renewal-ppt-generator
+dry_run: true
+

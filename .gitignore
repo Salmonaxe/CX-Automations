@@ -1,0 +1,53 @@
+# ---- OS / Editor ----
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# ---- Node (if used per project) ----
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ---- Build / Temp ----
+build/
+dist/
+tmp/
+temp/
+*.log
+
+# ---- Secrets ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/
+**/secrets/
+
+# ---- Local Data ----
+data/
+**/data/
+*.db
+*.sqlite
+*.sqlite3
+
+# ---- Project-local generated files ----
+projects/*/.venv/
+projects/*/.pytest_cache/
+projects/*/__pycache__/
