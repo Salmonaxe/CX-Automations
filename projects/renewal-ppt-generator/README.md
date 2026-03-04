@@ -1,12 +1,24 @@
-# Renewal PPT Generator
+# Renewal and Opportunities Automation
 
-Generates Cisco renewal opportunity PowerPoints for product and service opportunities using a CS Console Excel export.
+This project contains Cisco opportunity automation scripts for:
 
-## Inputs
+- Renewals PPT generation (baseline and enhanced)
+- New Opportunities PPT generation
+- Interactive timeline analysis in a web UI
 
-- `initial_fy` format `Q?FY??` (example: `Q1FY26`)
-- `final_fy` format `Q?FY??` (example: `Q3FY26`)
-- `excel_filename` `.xlsx` exported from CS Console renewals opportunities
+## Scripts
+
+- `src/create_renewal_ppt.py`
+Classic renewals PPT generator (product + service outputs).
+
+- `src/create_renew_ops_ppt.py`
+Enhanced renewals generator with minimum ATR filtering and additional monthly timeline slides.
+
+- `src/create_new_ops_ppt.py`
+New opportunities PPT generator with stage-based timeline coloring and minimum TCV filtering.
+
+- `src/opps_viewer.py`
+Streamlit web app to explore renewals and new opportunities together with interactive filters.
 
 ## Setup
 
@@ -19,22 +31,52 @@ python -m pip install -e .
 
 ## Run
 
+### 1) Baseline Renewals PPT
+
 ```powershell
-python .\src\create_renewal_ppt.py Q1FY26 Q3FY26 .\data\_Renewal_Opportunities_durgell_1770026732.xlsx
+python .\src\create_renewal_ppt.py Q1FY26 Q3FY26 .\data\renewals.xlsx
 ```
 
-## Output
+### 2) Enhanced Renewals PPT
 
-For input `your_file.xlsx`, script generates:
+```powershell
+python .\src\create_renew_ops_ppt.py Q1FY26 Q3FY26 .\data\renewals.xlsx --min-atr 100
+```
 
-- `your_file_product_Q1FY26-Q3FY26.pptx`
-- `your_file_service_Q1FY26-Q3FY26.pptx`
+### 3) New Opportunities PPT
+
+```powershell
+python .\src\create_new_ops_ppt.py Q1FY26 Q3FY26 .\data\new_ops.xlsx --min-tcv 100
+```
+
+### 4) Interactive Viewer
+
+```powershell
+streamlit run .\src\opps_viewer.py
+```
+
+## Typical Outputs
+
+- Renewals scripts produce `.pptx` files in the current working directory.
+- Viewer provides an integrated timeline and CSV export from the browser.
+
+## Multi-Customer Runs
+
+- `create_renew_ops_ppt.py` and `create_new_ops_ppt.py` support all-customer input files.
+- Title slides list multiple customers.
+- Summary section now includes:
+  - one overall `All Customers` summary slide
+  - one summary slide per customer
+
+## Git Hygiene
+
+- `projects/renewal-ppt-generator/.gitignore` excludes local `.xlsx` and generated `.pptx` files.
+- Keep customer data exports and generated decks local to your machine.
 
 ## Data Source Notes
 
 From CS Console:
 
-1. Select customer and go to `Manage Pipeline -> Renewals Opportunities`
-2. Choose `All Risk ATR` or `High Risk ATR`, and `Line Details`
-3. Export and save the `.xlsx`
-4. Use that file as script input
+1. Renewals: `Manage Pipeline -> Renewals Opportunities` (Line Details export)
+2. New Opportunities: `Manage Pipeline -> New Opportunities` (Line Details export)
+3. Save exported `.xlsx` files and pass them to the appropriate script

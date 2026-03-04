@@ -1,7 +1,7 @@
 [project]
 name = "renewal-ppt-generator"
 version = "0.1.0"
-description = "Generate renewal opportunity PowerPoints from Cisco renewals Excel exports"
+description = "Cisco opportunity automation scripts for renewals, new opportunities, and interactive timeline review"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -9,7 +9,9 @@ dependencies = [
   "python-pptx>=0.6.23",
   "matplotlib>=3.7",
   "numpy>=1.24",
-  "openpyxl>=3.1"
+  "openpyxl>=3.1",
+  "streamlit>=1.35",
+  "plotly>=5.20"
 ]
 
 [tool.pytest.ini_options]

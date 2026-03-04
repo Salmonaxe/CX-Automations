@@ -1,0 +1,11 @@
+# Local virtual environment
+.venv/
+
+# Python build metadata/cache
+src/*.egg-info/
+src/__pycache__/
+
+# Local data and generated presentations
+*.xlsx
+*.xls
+*.pptx
