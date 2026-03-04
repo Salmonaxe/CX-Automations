@@ -4,7 +4,8 @@ Cisco Opportunities Timeline Viewer (Integrated Web Version)
 Author: Daniel Urgell (durgell@cisco.com)
 
 Interactive web-based GUI for viewing renewal and new opportunity timelines with dynamic filtering.
-Run with: streamlit run opps_viewer.py
+Run from project root:
+    streamlit run .\\src\\opps_viewer.py
 """
 
 import streamlit as st

@@ -1,41 +1,30 @@
 '''
-Docstring for create_renew_ops_ppt
+Enhanced renewals PPT generator.
 
-Generate Cisco renewal opportunity PowerPoints for products and services from Excel.
-Author: Daniel Urgell (durgell@cisco.com)
+Generates Cisco renewal opportunity PowerPoints for product and service renewals
+from CS Console Excel exports.
 
-Syntax:
-    python create_renew_ops_ppt.py <initial_fy> <final_fy> <excel_filename> [min_atr]
-
-Parameters:
-    initial_fy: Initial date (format: QQFYXX, e.g., Q1FY26)
-    final_fy: Final date (format: QQFYXX, e.g., Q3FY26)
-    excel_filename: Input Excel file name (.xlsx)
-    min_atr: Minimum Expected ATR ($000s) threshold (optional, default: 0)
+Usage:
+    python create_renew_ops_ppt.py <initial_fy> <final_fy> <excel_filename> [--min-atr <value>]
 
 Example:
-    python create_renew_ops_ppt.py Q1FY26 Q3FY26 _Renewal_Opportunities_durgell_1770026732.xlsx 100
+    python create_renew_ops_ppt.py Q1FY26 Q3FY26 .\\data\\renewals\\renewals.xlsx --min-atr 100
 
-Returns:
-    Generates two PowerPoint files: one for product renewals and one for service renewals.
+Inputs:
+    initial_fy      Fiscal quarter start (QQFYXX), e.g. Q1FY26
+    final_fy        Fiscal quarter end (QQFYXX), e.g. Q3FY26
+    excel_filename  Renewals export file (.xlsx)
+    --min-atr       Optional minimum aggregated Expected ATR ($000s)
 
-Requirements (pip install <these packages>):
-    - argparse
-    - pandas
-    - python-pptx
-    - matplotlib
+Outputs:
+    - <input>_product_<FY-range>[_MIN_ATR_###K].pptx
+    - <input>_service_<FY-range>[_MIN_ATR_###K].pptx
 
-Notes:
-    - Current version works with Renewals Opportunities only 
-    - The script works with Python 3.6+
-    - The objective is to create slides with tables and timelines for the different renewals for each account.
-    - It checks for required columns in the Excel file.
-    - The Excel file required as input must be exported from CS Console:
-        1. Go to CS Console, select 'Customer Name', and navigate to Manage Pipeline -> Renewals Opportunities
-        2. Select 'All Risk ATR' or 'High Risk ATR', and 'Line Details'
-        3. Click on the Export button. File will be delivered via Webex Teams
-        4. Save the exported file and use it as input for this script
-
+Behavior:
+    - Supports single-customer or all-customer input files
+    - Aggregates rows by Deal Id for cleaner totals
+    - Adds summary slides for All Customers and per-customer views
+    - Adds account timelines and monthly timeline views
 '''
 
 

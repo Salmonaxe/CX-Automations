@@ -1,6 +1,10 @@
 # Runbook
 
-## Local Setup
+## Purpose
+
+Operational steps for running renewals and new opportunities reports from CS Console exports.
+
+## 1) One-Time Local Setup
 
 ```powershell
 cd .\projects\renewal-ppt-generator
@@ -9,25 +13,53 @@ python -m venv .venv
 python -m pip install -e .
 ```
 
-## Script Selection
+## 2) Prepare Inputs
 
-- Use `src/create_renewal_ppt.py` for baseline renewals PPT output.
-- Use `src/create_renew_ops_ppt.py` for enhanced renewals output (`--min-atr`, monthly timeline slides).
-- Use `src/create_new_ops_ppt.py` for new opportunities PPT output (`--min-tcv`).
-- Use `src/opps_viewer.py` for interactive filtering and integrated timeline review.
+Place files here:
 
-## Execute
+- Renewals export: `data/renewals/<file>.xlsx`
+- New opportunities export: `data/new-ops/<file>.xlsx`
+
+## 3) Run Commands
+
+### Enhanced Renewals (recommended)
 
 ```powershell
-python .\src\create_renewal_ppt.py Q1FY26 Q3FY26 .\data\renewals.xlsx
-python .\src\create_renew_ops_ppt.py Q1FY26 Q3FY26 .\data\renewals.xlsx --min-atr 100
-python .\src\create_new_ops_ppt.py Q1FY26 Q3FY26 .\data\new_ops.xlsx --min-tcv 100
+python .\src\create_renew_ops_ppt.py Q1FY26 Q3FY26 .\data\renewals\renewals.xlsx --min-atr 100
+```
+
+### New Opportunities
+
+```powershell
+python .\src\create_new_ops_ppt.py Q1FY26 Q3FY26 .\data\new-ops\new_ops.xlsx --min-tcv 100
+```
+
+### Baseline Renewals (legacy)
+
+```powershell
+python .\src\create_renewal_ppt.py Q1FY26 Q3FY26 .\data\renewals\renewals.xlsx
+```
+
+### Interactive Viewer
+
+```powershell
 streamlit run .\src\opps_viewer.py
 ```
 
+## 4) Output Locations
+
+Scripts write output PPT files to the current working directory (normally `projects/renewal-ppt-generator`).
+
+## 5) Multi-Customer Inputs
+
+Enhanced renewals and new opportunities scripts support all-customer exports and produce:
+
+- one overall summary (`All Customers`)
+- one summary slide per customer
+
 ## Troubleshooting
 
-- If PowerShell execution policy blocks `.ps1` scripts, run the Python commands directly as shown above.
-- Confirm required Excel columns are present for the selected script type.
-- Confirm input files are `.xlsx`.
-- If `streamlit` command is not found, run `python -m streamlit run .\src\opps_viewer.py`.
+- If VS Code shows missing imports, ensure interpreter is `projects/renewal-ppt-generator/.venv/Scripts/python.exe`.
+- If `streamlit` is not found, run `python -m streamlit run .\src\opps_viewer.py`.
+- If no output is generated, verify date range (`Q?FY??`) and required Excel columns.
+- Keep input files as `.xlsx`.

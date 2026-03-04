@@ -1,24 +1,22 @@
 # Renewal and Opportunities Automation
 
-This project contains Cisco opportunity automation scripts for:
+This project contains automation scripts for Cisco renewals and new opportunities data exported from CS Console.
 
-- Renewals PPT generation (baseline and enhanced)
-- New Opportunities PPT generation
-- Interactive timeline analysis in a web UI
+## What This Project Includes
 
-## Scripts
+- PPT generation for renewals (baseline and enhanced)
+- PPT generation for new opportunities
+- Interactive web viewer that combines renewals and new opportunities
 
-- `src/create_renewal_ppt.py`
-Classic renewals PPT generator (product + service outputs).
+## Recommended Script for Most Users
 
-- `src/create_renew_ops_ppt.py`
-Enhanced renewals generator with minimum ATR filtering and additional monthly timeline slides.
+Use `src/create_renew_ops_ppt.py` for renewals. It includes threshold filtering and clearer summaries for multi-customer files.
 
-- `src/create_new_ops_ppt.py`
-New opportunities PPT generator with stage-based timeline coloring and minimum TCV filtering.
+## Prerequisites
 
-- `src/opps_viewer.py`
-Streamlit web app to explore renewals and new opportunities together with interactive filters.
+- Python 3.11+
+- PowerShell terminal
+- CS Console Excel exports (`.xlsx`)
 
 ## Setup
 
@@ -29,54 +27,105 @@ python -m venv .venv
 python -m pip install -e .
 ```
 
-## Run
+## Where To Put Input Files
 
-### 1) Baseline Renewals PPT
+Store local exports under `data/`:
+
+- `data/renewals/`
+- `data/new-ops/`
+
+## Script Reference
+
+### 1) Baseline Renewals
+
+File: `src/create_renewal_ppt.py`
+
+Use when you need the original renewals flow.
 
 ```powershell
-python .\src\create_renewal_ppt.py Q1FY26 Q3FY26 .\data\renewals.xlsx
+python .\src\create_renewal_ppt.py Q1FY26 Q3FY26 .\data\renewals\renewals.xlsx
 ```
 
-### 2) Enhanced Renewals PPT
+Output:
+
+- `<input>_product_<FY-range>.pptx`
+- `<input>_service_<FY-range>.pptx`
+
+### 2) Enhanced Renewals
+
+File: `src/create_renew_ops_ppt.py`
+
+Use for production renewals reporting.
 
 ```powershell
-python .\src\create_renew_ops_ppt.py Q1FY26 Q3FY26 .\data\renewals.xlsx --min-atr 100
+python .\src\create_renew_ops_ppt.py Q1FY26 Q3FY26 .\data\renewals\renewals.xlsx --min-atr 100
 ```
 
-### 3) New Opportunities PPT
+Key behavior:
+
+- Aggregates by `Deal Id`
+- Supports all-customer files
+- Adds summary slides for:
+  - `All Customers`
+  - each customer individually
+- Adds monthly timeline slides
+
+Output:
+
+- `<input>_product_<FY-range>[_MIN_ATR_###K].pptx`
+- `<input>_service_<FY-range>[_MIN_ATR_###K].pptx`
+
+### 3) New Opportunities
+
+File: `src/create_new_ops_ppt.py`
 
 ```powershell
-python .\src\create_new_ops_ppt.py Q1FY26 Q3FY26 .\data\new_ops.xlsx --min-tcv 100
+python .\src\create_new_ops_ppt.py Q1FY26 Q3FY26 .\data\new-ops\new_ops.xlsx --min-tcv 100
 ```
+
+Key behavior:
+
+- Aggregates by `Deal Id`
+- Supports all-customer files
+- Adds summary slides for:
+  - `All Customers`
+  - each customer individually
+- Uses stage-based timeline colors
+
+Output:
+
+- `<input>_<FY-range>_TCV_MIN_<value>.pptx`
 
 ### 4) Interactive Viewer
+
+File: `src/opps_viewer.py`
 
 ```powershell
 streamlit run .\src\opps_viewer.py
 ```
 
-## Typical Outputs
+Key behavior:
 
-- Renewals scripts produce `.pptx` files in the current working directory.
-- Viewer provides an integrated timeline and CSV export from the browser.
+- Upload renewals and/or new opportunities exports
+- Filter by fiscal range, account, stage, pulses, and thresholds
+- Download filtered details as CSV
 
-## Multi-Customer Runs
+## Multi-Customer Behavior
 
-- `create_renew_ops_ppt.py` and `create_new_ops_ppt.py` support all-customer input files.
-- Title slides list multiple customers.
-- Summary section now includes:
-  - one overall `All Customers` summary slide
-  - one summary slide per customer
+For `create_renew_ops_ppt.py` and `create_new_ops_ppt.py`:
+
+- Title slide shows customer scope
+- Summary section includes one overall summary plus one per customer
+- Account-level table and timeline slides still break out by `Account Name`
 
 ## Git Hygiene
 
-- `projects/renewal-ppt-generator/.gitignore` excludes local `.xlsx` and generated `.pptx` files.
-- Keep customer data exports and generated decks local to your machine.
+`projects/renewal-ppt-generator/.gitignore` excludes local data and generated presentations (`.xlsx`, `.xls`, `.pptx`). Keep these local and do not commit them.
 
 ## Data Source Notes
 
 From CS Console:
 
-1. Renewals: `Manage Pipeline -> Renewals Opportunities` (Line Details export)
-2. New Opportunities: `Manage Pipeline -> New Opportunities` (Line Details export)
-3. Save exported `.xlsx` files and pass them to the appropriate script
+1. Renewals: `Manage Pipeline -> Renewals Opportunities` (Line Details)
+2. New opportunities: `Manage Pipeline -> New Opportunities` (Line Details)
+3. Export and save `.xlsx` files locally under `data/`

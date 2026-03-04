@@ -1,40 +1,28 @@
 '''
-Docstring for create_new_ops_ppt
+New opportunities PPT generator.
 
-Generate Cisco new opportunities PowerPoints from Excel.
-Author: Daniel Urgell (durgell@cisco.com)
+Generates Cisco new-opportunity PowerPoints from CS Console Excel exports.
 
-Syntax:
-    python create_new_ops_ppt.py <initial_fy> <final_fy> <excel_filename>
-
-Parameters:
-    initial_fy: Initial date (format: QQFYXX, e.g., Q1FY26)
-    final_fy: Final date (format: QQFYXX, e.g., Q3FY26)
-    excel_filename: Input Excel file name (.xlsx)
+Usage:
+    python create_new_ops_ppt.py <initial_fy> <final_fy> <excel_filename> [--min-tcv <value>]
 
 Example:
-    python create_new_ops_ppt.py Q1FY26 Q3FY26 _New_Opportunities_durgell_1770026732.xlsx
+    python create_new_ops_ppt.py Q1FY26 Q3FY26 .\\data\\new-ops\\new_ops.xlsx --min-tcv 100
 
-Returns:
-    Generates one PowerPoint files with table of new opportunities and timeline for each BU
+Inputs:
+    initial_fy      Fiscal quarter start (QQFYXX), e.g. Q1FY26
+    final_fy        Fiscal quarter end (QQFYXX), e.g. Q3FY26
+    excel_filename  New opportunities export file (.xlsx)
+    --min-tcv       Optional minimum aggregated Expected TCV ($000s)
 
-Requirements (pip install <these packages>):
-    - argparse
-    - pandas
-    - python-pptx
-    - matplotlib
+Output:
+    - <input>_<FY-range>_TCV_MIN_<value>.pptx
 
-Notes:
-    - Current version works with New Opportunities only 
-    - The script works with Python 3.6+
-    - The objective is to create slides with tables and timelines for the different new opportunities for each account.
-    - It checks for required columns in the Excel file.
-    - The Excel file required as input must be exported from CS Console:
-        1. Go to CS Console, select 'Customer Name', and navigate to Manage Pipeline -> New Opportunities
-        2. Select 'Line Details'
-        3. Click on the Export button. File will be delivered via Webex Teams
-        4. Save the exported file and use it as input for this script
-
+Behavior:
+    - Supports single-customer or all-customer input files
+    - Aggregates rows by Deal Id
+    - Adds summary slides for All Customers and per-customer views
+    - Uses stage-based colors in timeline visualizations
 '''
 
 

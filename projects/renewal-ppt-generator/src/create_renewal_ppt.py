@@ -1,38 +1,27 @@
 '''
-Docstring for create_renewal_ppt
-Generate Cisco renewal opportunity PowerPoints for products and services from Excel.
+Baseline renewals PPT generator.
 
-Syntax:
+Generates Cisco renewal opportunity PowerPoints for product and service renewals
+from CS Console Excel exports.
+
+Usage:
     python create_renewal_ppt.py <initial_fy> <final_fy> <excel_filename>
 
-Parameters:
-    initial_fy: Initial date (format: QQFYXX, e.g., Q1FY26)
-    final_fy: Final date (format: QQFYXX, e.g., Q3FY26)
-    excel_filename: Input Excel file name (.xlsx)
-
 Example:
-    python create_renewal_ppt.py Q1FY26 Q3FY26 _Renewal_Opportunities_durgell_1770026732.xlsx
+    python create_renewal_ppt.py Q1FY26 Q3FY26 .\\data\\renewals\\renewals.xlsx
 
-Returns:
-    Generates two PowerPoint files: one for product renewals and one for service renewals.
+Inputs:
+    initial_fy      Fiscal quarter start (QQFYXX), e.g. Q1FY26
+    final_fy        Fiscal quarter end (QQFYXX), e.g. Q3FY26
+    excel_filename  Renewals export file (.xlsx)
 
-Requirements (pip install <these packages>):
-    - argparse
-    - pandas
-    - python-pptx
-    - matplotlib
+Outputs:
+    - <input>_product_<FY-range>.pptx
+    - <input>_service_<FY-range>.pptx
 
-Notes:
-    - Current version works with Renewals Opportunities only
-    - The script works with Python 3.6+
-    - The objective is to create slides with tables and timelines for the different renewals for each account.
-    - It checks for required columns in the Excel file.
-    - The Excel file required as input must be exported from CS Console:
-        1. Go to CS Console, select 'Customer Name', and navigate to Manage Pipeline -> Renewals Opportunities
-        2. Select 'All Risk ATR' or 'High Risk ATR', and 'Line Details'
-        3. Click on the Export button. File will be delivered via Webex Teams
-        4. Save the exported file and use it as input for this script
-
+Note:
+    For richer multi-customer summaries and threshold filtering, use
+    `create_renew_ops_ppt.py`.
 '''
 
 
