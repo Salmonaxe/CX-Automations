@@ -4,7 +4,8 @@ Use one shared PowerPoint template for this project.
 
 ## Recommended file
 
-- `company-template.pptx`
+- Repo seed asset: `company-template.potx`
+- Runtime file used by the scripts: `company-template.pptx`
 
 ## Keep in the template
 
@@ -27,6 +28,6 @@ The automation creates slides programmatically. It only needs branding/layout de
 ## Validation checklist
 
 1. Open template and verify theme/fonts are correct.
-2. Save as `.pptx` (if you received a `.potx`, save/convert it to `.pptx`).
+2. Save `company-template.potx` as `company-template.pptx` before using the automation.
 3. Run one script with `--template-pptx` and confirm output branding.
 4. Confirm title and blank/content layouts render correctly.

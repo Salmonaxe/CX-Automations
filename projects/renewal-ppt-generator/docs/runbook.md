@@ -10,7 +10,8 @@ Operational steps for running renewals and new opportunities reports from CS Con
 cd .\projects\renewal-ppt-generator
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e .
+python -m pip install -e ".[dev]"
+python -m pytest
 ```
 
 ## 2) Prepare Inputs
@@ -19,7 +20,8 @@ Place files here:
 
 - Renewals export: `data/renewals/<file>.xlsx`
 - New opportunities export: `data/new-ops/<file>.xlsx`
-- Shared corporate template: `templates/company-template.pptx`
+- Repo seed template: `templates/company-template.potx`
+- Runtime corporate template: `templates/company-template.pptx`
 
 ## 3) Run Commands
 
@@ -63,6 +65,8 @@ Enhanced renewals and new opportunities scripts support all-customer exports and
 
 ## Troubleshooting
 
+- If you only have `templates/company-template.potx`, open it in PowerPoint and
+  save it as `templates/company-template.pptx` before using `--template-pptx`.
 - If VS Code shows missing imports, ensure interpreter is `projects/renewal-ppt-generator/.venv/Scripts/python.exe`.
 - If `streamlit` is not found, run `python -m streamlit run .\src\opps_viewer.py`.
 - If no output is generated, verify date range (`Q?FY??`) and required Excel columns.

@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def main() -> None:
-    print(f"project-template ran at {datetime.utcnow().isoformat()}Z")
+    print(f"project-template ran at {datetime.now(timezone.utc).isoformat()}")
 
 
 if __name__ == "__main__":

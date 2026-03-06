@@ -24,7 +24,8 @@ Use `src/create_renew_ops_ppt.py` for renewals. It includes threshold filtering 
 cd .\projects\renewal-ppt-generator
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e .
+python -m pip install -e ".[dev]"
+python -m pytest
 ```
 
 ## Where To Put Input Files
@@ -37,7 +38,8 @@ Store local exports under `data/`:
 Optional template files:
 
 - `templates/<your-company-template>.pptx`
-- Recommended shared file: `templates/company-template.pptx`
+- Repo seed file: `templates/company-template.potx`
+- Runtime file for `--template-pptx`: `templates/company-template.pptx`
 
 ## Script Reference
 
@@ -131,10 +133,20 @@ For `create_renew_ops_ppt.py` and `create_new_ops_ppt.py`:
 All three PPT generators support `--template-pptx` so output inherits your company theme.
 
 - Supported template extension: `.pptx`
-- If your corporate file is `.potx`, save/convert it to `.pptx` first
+- The repo currently includes `templates/company-template.potx` as a starter asset
+- Save or convert that `.potx` file to `templates/company-template.pptx` before using `--template-pptx`
 - Example:
   `--template-pptx .\templates\company-template.pptx`
 - Team convention: keep one canonical template in `templates/` and reuse it across all scripts
+
+## Verification Coverage
+
+The committed test suite is intentionally lightweight because customer exports
+are not stored in git. Current smoke coverage checks:
+
+- CLI `--help` execution for all three PPT generators
+- `.pptx` template validation behavior without needing sample Excel files
+- Python import/compile health for the Streamlit viewer and PPT scripts
 
 ## Git Hygiene
 

@@ -22,6 +22,10 @@ Do not manually create project folders unless there is a documented exception.
 
 - Keep implementation in `src/`, tests in `tests/`, and operational notes in `docs/`.
 - Keep dependencies scoped to each project.
+- Keep a runnable dev extra (for example `.[dev]`) when a project uses pytest or
+  other local verification tools.
+- Keep at least one smoke test runnable without private customer data so the repo
+  can be validated before pushing.
 - Keep secrets out of source control; use `.env` locally and commit only `.env.example`.
 - Move code to `shared/` only after real reuse across multiple projects.
 
