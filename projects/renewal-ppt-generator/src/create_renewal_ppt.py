@@ -5,7 +5,7 @@ Generates Cisco renewal opportunity PowerPoints for product and service renewals
 from CS Console Excel exports.
 
 Usage:
-    python create_renewal_ppt.py <initial_fy> <final_fy> <excel_filename>
+    python create_renewal_ppt.py <initial_fy> <final_fy> <excel_filename> [--template-pptx <file>]
 
 Example:
     python create_renewal_ppt.py Q1FY26 Q3FY26 .\\data\\renewals\\renewals.xlsx
@@ -14,6 +14,7 @@ Inputs:
     initial_fy      Fiscal quarter start (QQFYXX), e.g. Q1FY26
     final_fy        Fiscal quarter end (QQFYXX), e.g. Q3FY26
     excel_filename  Renewals export file (.xlsx)
+    --template-pptx Optional PowerPoint template (.pptx)
 
 Outputs:
     - <input>_product_<FY-range>.pptx
@@ -85,6 +86,97 @@ COLOR_RGB = {
 }
 DEFAULT_COLOR = 'black'
 
+EMU_PER_INCH = 914400
+SLIDE_MARGIN_IN = 0.35
+CONTENT_BOTTOM_MARGIN_IN = 0.3
+CONTENT_TITLE_HEIGHT_IN = 0.55
+CONTENT_TITLE_GAP_IN = 0.12
+TABLE_HEADER_HEIGHT_IN = 0.30
+TABLE_ROW_HEIGHT_IN = 0.24
+
+
+def remove_all_placeholders(slide):
+    for shape in list(slide.shapes):
+        if shape.is_placeholder:
+            sp = shape
+            sp.element.getparent().remove(sp.element)
+
+
+def get_slide_content_bounds(prs):
+    left = Inches(SLIDE_MARGIN_IN)
+    top = Inches(SLIDE_MARGIN_IN)
+    right = Inches(SLIDE_MARGIN_IN)
+    bottom = Inches(CONTENT_BOTTOM_MARGIN_IN)
+    width = max(int(prs.slide_width - left - right), Inches(4))
+    height = max(int(prs.slide_height - top - bottom), Inches(2))
+    return left, top, width, height
+
+
+def get_content_body_bounds(prs):
+    left, top, width, content_height = get_slide_content_bounds(prs)
+    title_height = Inches(CONTENT_TITLE_HEIGHT_IN)
+    title_gap = Inches(CONTENT_TITLE_GAP_IN)
+    body_top = top + title_height + title_gap
+    body_height = max(int(content_height - title_height - title_gap), Inches(1.6))
+    return left, top, width, title_height, body_top, body_height
+
+
+def add_content_title(slide, prs, text, font_size=16):
+    left, top, width, title_height, body_top, body_height = get_content_body_bounds(prs)
+    textbox = slide.shapes.add_textbox(left, top, width, title_height)
+    tf = textbox.text_frame
+    tf.word_wrap = True
+    tf.text = text
+    tf.paragraphs[0].font.size = Pt(font_size)
+    tf.paragraphs[0].alignment = 1
+    return left, body_top, width, body_height
+
+
+def get_table_rows_per_slide(content_height_emu, include_totals=False):
+    content_height_in = content_height_emu / EMU_PER_INCH
+    reserved_in = TABLE_HEADER_HEIGHT_IN + (TABLE_ROW_HEIGHT_IN if include_totals else 0.0)
+    usable_in = max(content_height_in - reserved_in, TABLE_ROW_HEIGHT_IN)
+    return max(1, int(usable_in / TABLE_ROW_HEIGHT_IN))
+
+
+def get_table_font_sizes(col_count):
+    if col_count >= 10:
+        return Pt(7), Pt(6)
+    if col_count >= 8:
+        return Pt(8), Pt(6)
+    return Pt(9), Pt(7)
+
+
+def apply_table_dimensions(table, total_width_emu, total_height_emu, first_col_ratio=0.30):
+    col_count = len(table.columns)
+    row_count = len(table.rows)
+    if col_count > 1:
+        first_col_width = int(total_width_emu * first_col_ratio)
+        remaining = max(total_width_emu - first_col_width, 0)
+        other_col_width = int(remaining / (col_count - 1)) if col_count > 1 else remaining
+        table.columns[0].width = first_col_width
+        for idx in range(1, col_count):
+            table.columns[idx].width = other_col_width
+    row_height = max(int(total_height_emu / max(row_count, 1)), Inches(0.18))
+    for row in table.rows:
+        row.height = row_height
+
+
+def add_fitted_picture(slide, img_stream, left, top, max_width, max_height, image_aspect_ratio):
+    if max_width <= 0 or max_height <= 0:
+        return
+    image_aspect = image_aspect_ratio if image_aspect_ratio and image_aspect_ratio > 0 else (16.0 / 9.0)
+    box_aspect = max_width / max_height
+    if image_aspect >= box_aspect:
+        draw_width = max_width
+        draw_height = int(draw_width / image_aspect)
+    else:
+        draw_height = max_height
+        draw_width = int(draw_height * image_aspect)
+    draw_left = left + int((max_width - draw_width) / 2)
+    draw_top = top + int((max_height - draw_height) / 2)
+    slide.shapes.add_picture(img_stream, draw_left, draw_top, width=draw_width, height=draw_height)
+
 
 def robust_validate_fy_quarter(fy_str):
     if not isinstance(fy_str, str):
@@ -115,6 +207,20 @@ def robust_check_excel_file(filename):
         return False
     if not os.path.isfile(filename):
         print(f"Error: File '{filename}' does not exist.", file=sys.stderr)
+        return False
+    return True
+
+def robust_check_template_file(filename):
+    if filename is None:
+        return True
+    if not isinstance(filename, str):
+        print("Error: Template filename must be a string.", file=sys.stderr)
+        return False
+    if not filename.lower().endswith('.pptx'):
+        print("Error: Template file must end with '.pptx'. If you have a .potx, save/convert it to .pptx first.", file=sys.stderr)
+        return False
+    if not os.path.isfile(filename):
+        print(f"Error: Template file '{filename}' does not exist.", file=sys.stderr)
         return False
     return True
 
@@ -183,6 +289,8 @@ def get_pulse_color(pulse_val):
 
 
 def add_summary_table_slide(prs, filtered, fy_start, fy_end, value_col, title_prefix):
+    if filtered.empty:
+        return None
     months = pd.date_range(start=fy_start, end=fy_end, freq='MS')
     month_labels = [m.strftime('%b %Y') for m in months]
     account_names = sorted(filtered['Account Name'].unique())
@@ -200,93 +308,99 @@ def add_summary_table_slide(prs, filtered, fy_start, fy_end, value_col, title_pr
     total_row = table_data.sum(axis=0)
     table_cols = list(month_labels) + ['Total ($000s)']
 
-    slide = prs.slides.add_slide(prs.slide_layouts[5])
-    for shape in list(slide.shapes):
-        if shape.is_placeholder and shape.placeholder_format.type == 1:
-            sp = shape
-            sp.element.getparent().remove(sp.element)
-    left = Inches(0.2)
-    top = Inches(0.3)
-    width = Inches(9)
-    height = Inches(0.5)
-    textbox = slide.shapes.add_textbox(left, top, width, height)
-    tf = textbox.text_frame
-    tf.text = f'{title_prefix} Summary Table - Expected ATR Aggregated by Month ($000s)'
-    tf.paragraphs[0].font.size = Pt(18)
-    tf.paragraphs[0].alignment = 1
+    _left, _top, _width, _title_height, _body_top, body_height = get_content_body_bounds(prs)
+    rows_per_slide = min(MAX_TABLE_ROWS_PER_SLIDE, get_table_rows_per_slide(body_height, include_totals=True))
+    header_font, body_font = get_table_font_sizes(len(table_cols) + 1)
+    total_accounts = list(table_data.index)
 
-    rows = table_data.shape[0]
-    cols = len(table_cols)
-    table_height = Inches(0.4 + 0.22 * min(rows, 40))
-    table = slide.shapes.add_table(rows + 2, cols + 1, Inches(0.2), Inches(1.0), Inches(9), table_height).table
-    table.cell(0, 0).text = 'Account Name'
-    table.cell(0, 0).text_frame.paragraphs[0].font.size = Pt(8)
-    table.cell(0, 0).text_frame.paragraphs[0].font.bold = True
-    for j, label in enumerate(table_cols):
-        cell = table.cell(0, j + 1)
-        cell.text = label
-        cell.text_frame.paragraphs[0].font.size = Pt(8)
-        cell.text_frame.paragraphs[0].font.bold = True
+    last_slide = None
+    num_pages = (len(total_accounts) + rows_per_slide - 1) // rows_per_slide
+    for page_idx, start_row in enumerate(range(0, len(total_accounts), rows_per_slide), start=1):
+        page_accounts = total_accounts[start_row:start_row + rows_per_slide]
+        is_last_page = start_row + rows_per_slide >= len(total_accounts)
+        title_suffix = f' (page {page_idx})' if num_pages > 1 else ''
 
-    for i, account in enumerate(table_data.index):
-        table.cell(i + 1, 0).text = account
-        table.cell(i + 1, 0).text_frame.paragraphs[0].font.size = Pt(8)
-        table.cell(i + 1, 0).text_frame.paragraphs[0].font.bold = True
+        slide = prs.slides.add_slide(prs.slide_layouts[1])
+        remove_all_placeholders(slide)
+        table_left, table_top, table_width, table_height = add_content_title(
+            slide,
+            prs,
+            f'{title_prefix} Summary Table - Expected ATR Aggregated by Month ($000s){title_suffix}',
+            font_size=16,
+        )
+
+        total_rows = 1 + len(page_accounts) + (1 if is_last_page else 0)
+        table = slide.shapes.add_table(total_rows, len(table_cols) + 1, table_left, table_top, table_width, table_height).table
+        apply_table_dimensions(table, table_width, table_height, first_col_ratio=0.28)
+
+        table.cell(0, 0).text = 'Account Name'
+        table.cell(0, 0).text_frame.paragraphs[0].font.size = header_font
+        table.cell(0, 0).text_frame.paragraphs[0].font.bold = True
         for j, label in enumerate(table_cols):
-            val = table_data.loc[account, label]
-            cell = table.cell(i + 1, j + 1)
-            cell.text = f'${int(round(val)):,}' if val > 0 else ''
-            cell.text_frame.paragraphs[0].font.size = Pt(8)
-            if label == 'Total ($000s)':
-                cell.text_frame.paragraphs[0].font.bold = True
+            cell = table.cell(0, j + 1)
+            cell.text = label
+            cell.text_frame.paragraphs[0].font.size = header_font
+            cell.text_frame.paragraphs[0].font.bold = True
 
-    table.cell(rows + 1, 0).text = 'Total ($000s)'
-    table.cell(rows + 1, 0).text_frame.paragraphs[0].font.size = Pt(8)
-    table.cell(rows + 1, 0).text_frame.paragraphs[0].font.bold = True
-    for j, label in enumerate(table_cols):
-        val = total_row[label]
-        cell = table.cell(rows + 1, j + 1)
-        cell.text = f'${int(round(val)):,}' if val > 0 else ''
-        cell.text_frame.paragraphs[0].font.size = Pt(8)
-        cell.text_frame.paragraphs[0].font.bold = True
-    return slide
+        for i, account in enumerate(page_accounts, start=1):
+            table.cell(i, 0).text = account
+            table.cell(i, 0).text_frame.paragraphs[0].font.size = body_font
+            table.cell(i, 0).text_frame.paragraphs[0].font.bold = True
+            for j, label in enumerate(table_cols):
+                val = table_data.loc[account, label]
+                cell = table.cell(i, j + 1)
+                cell.text = f'${int(round(val)):,}' if val > 0 else ''
+                cell.text_frame.paragraphs[0].font.size = body_font
+                if label == 'Total ($000s)':
+                    cell.text_frame.paragraphs[0].font.bold = True
+
+        if is_last_page:
+            total_idx = len(page_accounts) + 1
+            table.cell(total_idx, 0).text = 'Total ($000s)'
+            table.cell(total_idx, 0).text_frame.paragraphs[0].font.size = body_font
+            table.cell(total_idx, 0).text_frame.paragraphs[0].font.bold = True
+            for j, label in enumerate(table_cols):
+                val = total_row[label]
+                cell = table.cell(total_idx, j + 1)
+                cell.text = f'${int(round(val)):,}' if val > 0 else ''
+                cell.text_frame.paragraphs[0].font.size = body_font
+                cell.text_frame.paragraphs[0].font.bold = True
+        last_slide = slide
+    return last_slide
 
 
 def add_table_slides(prs, filtered, columns, title_prefix, account_col='Account Name'):
     for account in filtered[account_col].unique():
         acc_table_df = filtered[filtered[account_col] == account][columns]
         num_rows = acc_table_df.shape[0]
-        num_slides = (num_rows // MAX_TABLE_ROWS_PER_SLIDE) + (1 if num_rows % MAX_TABLE_ROWS_PER_SLIDE else 0)
-        for slide_idx, start_row in enumerate(range(0, num_rows, MAX_TABLE_ROWS_PER_SLIDE)):
-            chunk = acc_table_df.iloc[start_row:start_row + MAX_TABLE_ROWS_PER_SLIDE]
-            slide = prs.slides.add_slide(prs.slide_layouts[5])
-            for shape in list(slide.shapes):
-                if shape.is_placeholder and shape.placeholder_format.type == 1:
-                    sp = shape
-                    sp.element.getparent().remove(sp.element)
-            left = Inches(0.2)
-            top = Inches(0.3)
-            width = Inches(9)
-            height = Inches(0.5)
-            textbox = slide.shapes.add_textbox(left, top, width, height)
-            tf = textbox.text_frame
-            tf.text = f'{account} {title_prefix} Opportunities' + (f' (page {slide_idx + 1})' if num_slides > 1 else '')
-            tf.paragraphs[0].font.size = Pt(16)
-            tf.paragraphs[0].alignment = 1
+        _left, _top, _width, _title_height, _body_top, body_height = get_content_body_bounds(prs)
+        rows_per_slide = min(MAX_TABLE_ROWS_PER_SLIDE, get_table_rows_per_slide(body_height, include_totals=False))
+        num_slides = (num_rows // rows_per_slide) + (1 if num_rows % rows_per_slide else 0)
+        for slide_idx, start_row in enumerate(range(0, num_rows, rows_per_slide)):
+            chunk = acc_table_df.iloc[start_row:start_row + rows_per_slide]
+            slide = prs.slides.add_slide(prs.slide_layouts[1])
+            remove_all_placeholders(slide)
+            table_left, table_top, table_width, table_height = add_content_title(
+                slide,
+                prs,
+                f'{account} {title_prefix} Opportunities' + (f' (page {slide_idx + 1})' if num_slides > 1 else ''),
+                font_size=15,
+            )
             rows, cols = chunk.shape
-            table_height = Inches(0.4 + 0.25 * min(rows, MAX_TABLE_ROWS_PER_SLIDE))
-            table = slide.shapes.add_table(rows + 1, cols, Inches(0.2), Inches(1.0), Inches(9), table_height).table
+            table = slide.shapes.add_table(rows + 1, cols, table_left, table_top, table_width, table_height).table
+            apply_table_dimensions(table, table_width, table_height, first_col_ratio=0.24)
+            header_font, body_font = get_table_font_sizes(cols)
             for j, col in enumerate(chunk.columns):
                 cell = table.cell(0, j)
                 cell.text = str(col)
-                cell.text_frame.paragraphs[0].font.size = Pt(8)
+                cell.text_frame.paragraphs[0].font.size = header_font
                 cell.text_frame.paragraphs[0].font.bold = True
             for i, row in enumerate(chunk.values):
                 for j, _colname in enumerate(chunk.columns):
                     cell = table.cell(i + 1, j)
                     val = '' if pd.isnull(row[j]) else row[j].strftime('%Y-%m-%d') if isinstance(row[j], pd.Timestamp) else str(row[j])
                     cell.text = val
-                    cell.text_frame.paragraphs[0].font.size = Pt(6)
+                    cell.text_frame.paragraphs[0].font.size = body_font
 
 
 def add_timeline_legend(ax):
@@ -356,7 +470,8 @@ def add_timeline_slides(prs, filtered, fy_start, fy_end, title_prefix, account_c
             acc_slide_df['plot_row'] = acc_slide_df['timeline_row'] - min_row
             n_rows_this_slide = acc_slide_df['plot_row'].max() + 1
             fig_height = BASE_HEIGHT + TIMELINE_SPACING * n_rows_this_slide
-            fig, ax = plt.subplots(figsize=(10, fig_height))
+            fig_width = 10
+            fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
             for i in range(n_rows_this_slide):
                 ax.hlines(y=i, xmin=fy_start, xmax=fy_end, color='tab:blue', linewidth=2)
@@ -406,21 +521,16 @@ def add_timeline_slides(prs, filtered, fy_start, fy_end, title_prefix, account_c
             plt.savefig(img_stream, format='png')
             plt.close(fig)
             img_stream.seek(0)
-            timeline_slide = prs.slides.add_slide(prs.slide_layouts[5])
-            for shape in list(timeline_slide.shapes):
-                if shape.is_placeholder and shape.placeholder_format.type == 1:
-                    sp = shape
-                    sp.element.getparent().remove(sp.element)
-            left = Inches(1)
-            top = Inches(0.3)
-            width = Inches(8)
-            height = Inches(0.5)
-            textbox = timeline_slide.shapes.add_textbox(left, top, width, height)
-            tf = textbox.text_frame
-            tf.text = f'{account} {title_prefix} Opportunities Timeline' + (f' (page {slide_idx + 1})' if n_timelines > MAX_TIMELINES_PER_SLIDE else '')
-            tf.paragraphs[0].font.size = Pt(16)
-            tf.paragraphs[0].alignment = 1
-            timeline_slide.shapes.add_picture(img_stream, Inches(1), Inches(1.0), width=Inches(8))
+            image_aspect_ratio = fig_width / fig_height if fig_height > 0 else (16.0 / 9.0)
+            timeline_slide = prs.slides.add_slide(prs.slide_layouts[1])
+            remove_all_placeholders(timeline_slide)
+            pic_left, pic_top, pic_width, pic_height = add_content_title(
+                timeline_slide,
+                prs,
+                f'{account} {title_prefix} Opportunities Timeline' + (f' (page {slide_idx + 1})' if n_timelines > MAX_TIMELINES_PER_SLIDE else ''),
+                font_size=15,
+            )
+            add_fitted_picture(timeline_slide, img_stream, pic_left, pic_top, pic_width, pic_height, image_aspect_ratio)
 
             month_deals = {}
             for _, row in acc_slide_df.iterrows():
@@ -443,25 +553,30 @@ def add_timeline_slides(prs, filtered, fy_start, fy_end, title_prefix, account_c
             timeline_slide.notes_slide.notes_text_frame.text = notes_text
 
 
-def create_ppt_for_filter(filtered, fy_start, fy_end, excel_filename, suffix, customer_name, initial_fy, final_fy, file_creation_date, title_prefix, columns):
-    prs = Presentation()
+def create_ppt_for_filter(filtered, fy_start, fy_end, excel_filename, suffix, customer_name, initial_fy, final_fy, file_creation_date, title_prefix, columns, template_pptx=None):
+    prs = Presentation(template_pptx) if template_pptx else Presentation()
     title_slide = prs.slides.add_slide(prs.slide_layouts[0])
-    title = title_slide.shapes.title
-    subtitle = title_slide.placeholders[1]
-    title.text = f'{title_prefix} Opportunities in {customer_name}'
-    subtitle.text = (
+    title_shape = title_slide.shapes.title
+    title_text = f'{title_prefix} Opportunities in {customer_name}'
+    if title_shape is not None:
+        title_shape.text = title_text
+    else:
+        title_box = title_slide.shapes.add_textbox(Inches(0.6), Inches(0.4), Inches(8.8), Inches(0.8))
+        title_box.text_frame.text = title_text
+    subtitle_text = (
         f'Date Range: {initial_fy} - {final_fy}\n'
         f'Fiscal Dates: {fy_start.strftime("%b %d, %Y")} - {fy_end.strftime("%b %d, %Y")}\n'
         f'File Created: {file_creation_date}'
     )
+    try:
+        subtitle_shape = title_slide.placeholders[1]
+        subtitle_shape.text = subtitle_text
+    except Exception:
+        subtitle_box = title_slide.shapes.add_textbox(Inches(0.8), Inches(1.4), Inches(8.5), Inches(1.6))
+        subtitle_box.text_frame.text = subtitle_text
 
     value_col = 'Expected ATR ($000s)'
     add_summary_table_slide(prs, filtered, fy_start, fy_end, value_col, title_prefix)
-
-    xml_slides = prs.slides._sldIdLst
-    slides = list(xml_slides)
-    xml_slides.insert(1, slides[-1])
-    del slides[-1]
 
     add_table_slides(prs, filtered, columns, title_prefix)
     add_timeline_slides(prs, filtered, fy_start, fy_end, title_prefix)
@@ -470,7 +585,7 @@ def create_ppt_for_filter(filtered, fy_start, fy_end, excel_filename, suffix, cu
     print(f'Presentation saved as: {pptx_filename}')
 
 
-def create_renewal_ppt(initial_fy, final_fy, excel_filename):
+def create_renewal_ppt(initial_fy, final_fy, excel_filename, template_pptx=None):
     fy_start, fy_end = get_fy_range(initial_fy, final_fy)
     df = check_excel_file(excel_filename)
     if len(df) == 0:
@@ -501,7 +616,7 @@ def create_renewal_ppt(initial_fy, final_fy, excel_filename):
         create_ppt_for_filter(
             filtered_product, fy_start, fy_end, excel_filename, product_pptx_filename_suffix,
             customer_name, initial_fy, final_fy, file_creation_date,
-            'Product Renewal', product_columns
+            'Product Renewal', product_columns, template_pptx
         )
     else:
         print('No product opportunities found.')
@@ -512,7 +627,7 @@ def create_renewal_ppt(initial_fy, final_fy, excel_filename):
         create_ppt_for_filter(
             filtered_service, fy_start, fy_end, excel_filename, service_pptx_filename_suffix,
             customer_name, initial_fy, final_fy, file_creation_date,
-            'Service Renewal', service_columns
+            'Service Renewal', service_columns, template_pptx
         )
     else:
         print('No service opportunities found.')
@@ -523,6 +638,7 @@ if __name__ == '__main__':
     parser.add_argument('initial_fy', type=str, help='Initial date (format: QQFYXX, e.g., Q1FY26)')
     parser.add_argument('final_fy', type=str, help='Final date (format: QQFYXX, e.g., Q3FY26)')
     parser.add_argument('excel_filename', type=str, help='Input Excel file name (.xlsx)')
+    parser.add_argument('--template-pptx', type=str, dest='template_pptx', default=None, help="Optional PowerPoint template file (.pptx)")
     args = parser.parse_args()
 
     if not robust_validate_fy_quarter(args.initial_fy):
@@ -531,9 +647,12 @@ if __name__ == '__main__':
         sys.exit(2)
     if not robust_check_excel_file(args.excel_filename):
         sys.exit(2)
+    if not robust_check_template_file(args.template_pptx):
+        sys.exit(2)
 
     try:
-        create_renewal_ppt(args.initial_fy, args.final_fy, args.excel_filename)
+        create_renewal_ppt(args.initial_fy, args.final_fy, args.excel_filename, args.template_pptx)
     except Exception as e:
         print(f'Error: {e}', file=sys.stderr)
         sys.exit(2)
+

@@ -19,6 +19,7 @@ Place files here:
 
 - Renewals export: `data/renewals/<file>.xlsx`
 - New opportunities export: `data/new-ops/<file>.xlsx`
+- Shared corporate template: `templates/company-template.pptx`
 
 ## 3) Run Commands
 
@@ -26,18 +27,21 @@ Place files here:
 
 ```powershell
 python .\src\create_renew_ops_ppt.py Q1FY26 Q3FY26 .\data\renewals\renewals.xlsx --min-atr 100
+python .\src\create_renew_ops_ppt.py Q1FY26 Q3FY26 .\data\renewals\renewals.xlsx --min-atr 100 --template-pptx .\templates\company-template.pptx
 ```
 
 ### New Opportunities
 
 ```powershell
 python .\src\create_new_ops_ppt.py Q1FY26 Q3FY26 .\data\new-ops\new_ops.xlsx --min-tcv 100
+python .\src\create_new_ops_ppt.py Q1FY26 Q3FY26 .\data\new-ops\new_ops.xlsx --min-tcv 100 --template-pptx .\templates\company-template.pptx
 ```
 
 ### Baseline Renewals (legacy)
 
 ```powershell
 python .\src\create_renewal_ppt.py Q1FY26 Q3FY26 .\data\renewals\renewals.xlsx
+python .\src\create_renewal_ppt.py Q1FY26 Q3FY26 .\data\renewals\renewals.xlsx --template-pptx .\templates\company-template.pptx
 ```
 
 ### Interactive Viewer

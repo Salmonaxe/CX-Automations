@@ -34,6 +34,11 @@ Store local exports under `data/`:
 - `data/renewals/`
 - `data/new-ops/`
 
+Optional template files:
+
+- `templates/<your-company-template>.pptx`
+- Recommended shared file: `templates/company-template.pptx`
+
 ## Script Reference
 
 ### 1) Baseline Renewals
@@ -44,6 +49,7 @@ Use when you need the original renewals flow.
 
 ```powershell
 python .\src\create_renewal_ppt.py Q1FY26 Q3FY26 .\data\renewals\renewals.xlsx
+python .\src\create_renewal_ppt.py Q1FY26 Q3FY26 .\data\renewals\renewals.xlsx --template-pptx .\templates\company-template.pptx
 ```
 
 Output:
@@ -59,6 +65,7 @@ Use for production renewals reporting.
 
 ```powershell
 python .\src\create_renew_ops_ppt.py Q1FY26 Q3FY26 .\data\renewals\renewals.xlsx --min-atr 100
+python .\src\create_renew_ops_ppt.py Q1FY26 Q3FY26 .\data\renewals\renewals.xlsx --min-atr 100 --template-pptx .\templates\company-template.pptx
 ```
 
 Key behavior:
@@ -81,6 +88,7 @@ File: `src/create_new_ops_ppt.py`
 
 ```powershell
 python .\src\create_new_ops_ppt.py Q1FY26 Q3FY26 .\data\new-ops\new_ops.xlsx --min-tcv 100
+python .\src\create_new_ops_ppt.py Q1FY26 Q3FY26 .\data\new-ops\new_ops.xlsx --min-tcv 100 --template-pptx .\templates\company-template.pptx
 ```
 
 Key behavior:
@@ -117,6 +125,16 @@ For `create_renew_ops_ppt.py` and `create_new_ops_ppt.py`:
 - Title slide shows customer scope
 - Summary section includes one overall summary plus one per customer
 - Account-level table and timeline slides still break out by `Account Name`
+
+## Corporate Template Support
+
+All three PPT generators support `--template-pptx` so output inherits your company theme.
+
+- Supported template extension: `.pptx`
+- If your corporate file is `.potx`, save/convert it to `.pptx` first
+- Example:
+  `--template-pptx .\templates\company-template.pptx`
+- Team convention: keep one canonical template in `templates/` and reuse it across all scripts
 
 ## Git Hygiene
 
